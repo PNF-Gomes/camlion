@@ -1,5 +1,5 @@
 yolo/yolo*
-videos/*
+
 output/*
 *.pyc
 *.vscode
