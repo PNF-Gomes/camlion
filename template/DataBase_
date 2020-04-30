@@ -1,0 +1,25 @@
+
+//create schema
+CREATE DATABASE `camlion` /*!40100 DEFAULT CHARACTER SET latin1 */;
+
+//create heat table
+CREATE TABLE `heat` (
+  `idheat` int(11) NOT NULL AUTO_INCREMENT,
+  `x` int(3) NOT NULL,
+  `y` int(3) NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`idheat`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+
+//create monitoring table
+CREATE TABLE `monitoring` (
+  `idmonitoring` int(11) NOT NULL AUTO_INCREMENT,
+  `pm2` decimal(3,2) NOT NULL,
+  `fisicdist` decimal(4,2) NOT NULL,
+  `zonedanger` int(1) NOT NULL,
+  `risk` int(1) NOT NULL,
+  `data` datetime NOT NULL,
+  `georisk` varchar(45) NOT NULL,
+  PRIMARY KEY (`idmonitoring`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+
