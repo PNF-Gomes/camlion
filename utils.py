@@ -30,7 +30,7 @@ def bightness_contrast_enhance(image, alpha = 1.6, beta = 0):
     return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
 def obtain_ground_distance_scaler(coord, meters):
-    pixel_distance = euclidian_distance(coord[0, 0], coord[0, 1], coord[1, 0], coord[1, 1])
+    pixel_distance = euclidian_distance(coord[0][0], coord[0][1], coord[1][0], coord[1][1])
     return (meters/pixel_distance)
 
 def print_colored(color, text):
@@ -40,7 +40,7 @@ def prompt_input_area():
     accept = False
     while not accept:
         print(Color.BLUE, end='')
-        get_value = input("\n1. Please input the area of the field-of-view(in sq meters): ")
+        get_value = input("\n3. Please input the area of the field-of-view(in sq meters): ")
         print(Color.ENDC, end='')
 
         try:
@@ -54,3 +54,19 @@ def prompt_input_area():
             else:
                 print('Input must be numeric, e.g 1.5, 12, 50, 100.58, 200....')
                 return prompt_input_area()
+
+def confirm_choice():
+    print(Color.BLUE, end='')
+    start = input("Are you satisfied? [Y/n/q] ")
+    print(Color.ENDC, end='')
+
+    if (start.lower() == 'y'):
+        return True
+    elif(start.lower() == 'n') or ():
+        return False
+    elif(start.lower() == 'q'):
+        print("\nQuitting the program...")
+        return exit(1)
+    else:
+        print("Didn't get that...")
+        return confirm_choice()
