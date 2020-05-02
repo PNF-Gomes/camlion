@@ -22,7 +22,7 @@ class ContagionRiskEvaluator:
         #external variables regarding exterior
         self.weather_info_acquirer = WeatherInfo()
         self.geo_risk_acquirer = GeoRiskInfo()
-        self.geo_risk_acquirer.get_geo_risk_info()
+        self.geo_risk = self.geo_risk_acquirer.get_geo_risk_info()
         self.exterior_temperature, self.exterior_humidity =  self.weather_info_acquirer.get_weather_info()
         print(self.exterior_temperature, self.exterior_humidity)
         self.wind_speed = WIND_SPEED
@@ -57,6 +57,10 @@ class ContagionRiskEvaluator:
     def wind_speed_norm(self):
         return self.normalize(self.wind_speed, 2.8, 7)
     
+    def geo_risk_norm(self):
+        self.geo_risk = self.geo_risk_acquirer.get_geo_risk_info()
+        return self.normalize(self.geo_risk, 0, 30000)
+    
     def normalize(self, value, low_risk_value, high_risk_value):
         return interpolation(low_risk_value, 0, high_risk_value, 1, value)
 
@@ -64,7 +68,7 @@ class ContagionRiskEvaluator:
         risk =  2.5*self.physical_distance_norm() + \
                 2*self.people_per_square_meter_norm() + \
                 1*self.wind_speed_norm() + \
-                1*self.geo_risk + \
+                1*self.geo_risk_norm() + \
                 0.6 * self.temperature_norm() + \
                 0.4 * self.humidity_norm()
             
@@ -103,5 +107,18 @@ class WeatherInfo():
 
         return current_temperature, current_humidity
 
-
+class GeoRiskInfo():
+    
+    def __init__(self):
+        self.base_url = "https://api.covid19api.com/total/country/"
+        self.country_name = "spain"
+        self.complete_url = self.base_url + self.country_name
+    
+    def get_geo_risk_info(self):
+        response = requests.get(self.complete_url)
+        x = response.json()
+        geo_risk_list = x
+        info = geo_risk_list[-1]
+        active_cases = info["Confirmed"] - info["Deaths"] - info ["Recovered"]
+        return active_cases
             
