@@ -74,7 +74,7 @@ def people_tracker(args, database):
 
     #TODO change this
     transformered_height = transformedCorners[2][1] - transformedCorners[1][1]
-    transformered_width = transformedCorners[2][0] - transformedCorners[0][0]
+    transformered_width = transformedCorners[1][0] - transformedCorners[0][0]
 
     #transform line
     transformed_line = []
