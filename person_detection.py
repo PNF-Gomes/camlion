@@ -13,8 +13,13 @@ class PersonDetection:
         self.width = width          # bounding_box width
         self.height = height        # bounding_box height
         self.bottom_point = self.compute_bottom_point() #bottom points is in source image pixel coordinates
-        self.safe = True            # person is safe until someone is detected nearby
+
+        # person is safe until someone is detected nearby
+        self.safe = True
+
         self.coordinates = None
+
+        self.infected_with = []
 
     def compute_bottom_point(self):
         return (self.centroid[0], self.centroid[1] + self.height/2)
@@ -33,17 +38,21 @@ def detect_people(args, W, H, layerOutputs):
             classID = np.argmax(scores)
             confidence = scores[classID]
 
-            if (definitions.LABELS[classID] == "person" and confidence > args["confidence"]):
-                # scale the bounding box coordinates back relative to the size of the image
-                box = detection[0:4] * np.array([W, H, W, H])
-                (centerX, centerY, width, height) = box.astype("int")
+            if (definitions.LABELS[classID] == "person"):
+                if (confidence > args["confidence"]):
+                    # scale the bounding box coordinates back relative to the
+                    # size of the image, keeping in mind that YOLO actually
+                    # returns the center (x, y)-coordinates of the bounding
+                    # box followed by the boxes' width and height
+                    box = detection[0:4] * np.array([W, H, W, H])
+                    (centerX, centerY, width, height) = box.astype("int")
 
-                x = int(centerX - (width / 2))
-                y = int(centerY - (height / 2))
+                    x = int(centerX - (width / 2))
+                    y = int(centerY - (height / 2))
 
-                boxes.append([x, y, int(width), int(height)])
-                confidences.append(float(confidence))
-                centroids.append((centerX, centerY))
+                    boxes.append([x, y, int(width), int(height)])
+                    confidences.append(float(confidence))
+                    centroids.append((centerX, centerY))
 
     detection_ids = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
 

@@ -21,8 +21,10 @@ class ContagionRiskEvaluator:
 
         #external variables regarding exterior
         self.weather_info_acquirer = WeatherInfo()
-        self.exterior_temperature =  EXT_TEMPERATURE
-        self.exterior_humidity = EXT_HUMIDITY
+        self.geo_risk_acquirer = GeoRiskInfo()
+        self.geo_risk_acquirer.get_geo_risk_info()
+        self.exterior_temperature, self.exterior_humidity =  self.weather_info_acquirer.get_weather_info()
+        print(self.exterior_temperature, self.exterior_humidity)
         self.wind_speed = WIND_SPEED
         self.geo_risk = GEO_RISK
         self.air_pollution = 0.0 #idle for now
@@ -74,6 +76,7 @@ class ContagionRiskEvaluator:
         return risk
 
     def compute_environmental_risk(self):
+        self.exterior_temperature, self.exterior_humidity =  self.weather_info_acquirer.get_weather_info()
         return self.temperature_norm() + self.humidity_norm()
     
     def compute_geo_risk(self):
@@ -83,8 +86,8 @@ class WeatherInfo():
     
     def __init__(self):
         self.api_key = "6d4be0a06273fcc9d1448610ab45f8d1"
-        self.base_url = "https://api.openweathermap.org/data/2.5/weather"
-        self.city_name = "new york"
+        self.base_url = "https://api.openweathermap.org/data/2.5/weather/?"
+        self.city_name = "turin"
         self.complete_url = self.base_url + "appid=" + self.api_key + "&q=" + self.city_name
 
     def get_weather_info(self):
@@ -94,6 +97,11 @@ class WeatherInfo():
             weather_info = x["main"]
             current_temperature = (weather_info["temp"] - 273.15)//1 
             current_humidity = weather_info["humidity"]
-            z = x["weather"]
         else:
-            print("No weather info was found! 20oC and 70 humidity will be used")
+            print("No weather info was found! EXT_TEMPERATURE and EXT_HUMIDITY humidity will be used")
+            return EXT_TEMPERATURE, EXT_HUMIDITY
+
+        return current_temperature, current_humidity
+
+
+            

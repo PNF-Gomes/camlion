@@ -113,25 +113,9 @@ def setup_bird_eye_view(video, args):
         birdEyeView = BirdEyeView(video)
         birdEyeView.set_frame(args)
         birdEyeView.get_four_point_view()
-        start = continue_after_bird_eye()
+        start = confirm_choice()
 
     birdEyeView.order_points()
     birdEyeView.print_plane_coordinates()
 
     return birdEyeView
-
-def continue_after_bird_eye():
-    print(Color.BLUE, end='')
-    start = input("Are you satisfied with the points marked? [Y/n/q] ")
-    print(Color.ENDC, end='')
-
-    if (start.lower() == 'y'):
-        return True
-    elif(start.lower() == 'n'):
-        return False
-    elif(start.lower() == 'q'):
-        print("\nQuitting the program...")
-        return exit(1)
-    else:
-        print("Didn't get that...")
-        return continue_after_bird_eye()

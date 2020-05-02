@@ -11,7 +11,7 @@ class DataBase():
         self.update = False
 
         self.mydb = mysql.connector.connect(
-            host="",
+            host="2.80.0.133",
             user="PedroGomes",
             passwd="2020guarda#",
             database="camlion"

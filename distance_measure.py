@@ -116,30 +116,14 @@ class SceneToGroundDistance(object):
 def setup_scene_to_ground_dist(video, args):
     start = False
     while (not start):
-        print_colored(Color.CYAN, "\n2. Please input coordinates of line in image.")
+        print_colored(Color.CYAN, "\n1. Please input coordinates of line in image.")
         sceneToGroundDistance = SceneToGroundDistance(video)
         sceneToGroundDistance.set_frame(args)
         sceneToGroundDistance.get_two_points_view()
         sceneToGroundDistance.ground_distance_meters = sceneToGroundDistance.ground_distance_input()
-        start = continue_after_bird_eye()
+        start = confirm_choice()
 
     sceneToGroundDistance.order_points()
     sceneToGroundDistance.print_plane_coordinates()
 
     return sceneToGroundDistance
-
-def continue_after_bird_eye():
-    print(Color.BLUE, end='')
-    start = input("Are you satisfied with the line drawn? [Y/n/q] ")
-    print(Color.ENDC, end='')
-
-    if (start.lower() == 'y'):
-        return True
-    elif(start.lower() == 'n') or ():
-        return False
-    elif(start.lower() == 'q'):
-        print("\nQuitting the program...")
-        return exit(1)
-    else:
-        print("Didn't get that...")
-        return continue_after_bird_eye()

@@ -11,6 +11,7 @@ import dlib
 import cv2
 import os
 import math
+import threading
 # project
 import definitions
 from bird_eye_view import *
@@ -18,9 +19,15 @@ from distance_measure import *
 from homography import *
 from person_detection import *
 from utils import *
+from contagion_risk_evaluator import *
+from database_handle import *
+import time
 
 
-def people_tracker(args):
+def people_tracker(args, database):
+
+    risk_evaluator = ContagionRiskEvaluator()
+
     print("[INFO] loading model...")
     net = cv2.dnn.readNetFromDarknet(args["config"], args["model"])
     ln = net.getLayerNames()
@@ -30,21 +37,18 @@ def people_tracker(args):
     W = None
     H = None
     totalFrames = 0
-    totalDown = 0
-    totalUp = 0
     fps = FPS().start()
 
     video = get_video(args)
 
     print_colored(Color.PURPLE, "\nTo caliberate the system, you will be asked to enter 4 information:\n" +
-        "  1. The ground area (excluding walls) of the field-of-view of the camera e.g the sq meter area of a room\n"
-        "  2. Two points - a line (on the floor): this represents a known distance in the real world e.g. the distance between two tables\n"+
-        "  3. The length of the line you entered in the real world (in meters)\n" +
+        "  1. Two points - a line (on the floor): this represents a known distance in the real world e.g. the distance between two tables\n"+
+        "  2. The length of the line you entered in the real world (in meters)\n" +
+        "  3. The ground area (excluding walls) of the field-of-view of the camera e.g the sq meter area of a room\n" +
         "  4. Four points - a rectangle: this is going to be used as reference to the ground. Try to select a clean rectangle in the floor.\n")
 
-    area = prompt_input_area()
     scene_to_ground_distance = setup_scene_to_ground_dist(video, args)
-
+    area = prompt_input_area()
     # [[top-left], [top-right], [bottom-right], [bottom-left]]
     bird_eye_view = setup_bird_eye_view(video, args)
     #pts_src = [[606, 106], [806, 132], [511, 434],[201, 354]]
@@ -68,6 +72,7 @@ def people_tracker(args):
     transformedCorners.append(homography.transform_point((bird_eye_view.src_image_width, bird_eye_view.src_image_height)))
     transformedCorners.append(homography.transform_point((0, bird_eye_view.src_image_height)))
 
+    #TODO change this
     transformered_height = transformedCorners[2][1] - transformedCorners[1][1]
     transformered_width = transformedCorners[2][0] - transformedCorners[0][0]
 
@@ -82,8 +87,8 @@ def people_tracker(args):
                             scene_to_ground_distance.ground_distance_meters)
 
     # Initiates Map
-    c_width = 500
-    c_height = 500
+    c_width = 499
+    c_height = 499
     tk = Tk()
     canvas = Canvas(tk, width=c_width, height=c_height, bd=0, highlightthickness=0, background="black")
     canvas.pack()
@@ -120,9 +125,15 @@ def people_tracker(args):
 
             current_person_bp = homography.transform_point(people_detected[i].bottom_point)
 
-            people_detected[i].coordinates = (
+            people_detected[i].coordinates = [
                 interpolation(transformedCorners[0][0], 0, (transformered_width + transformedCorners[0][0]), c_width, current_person_bp[0]),
-                interpolation(transformedCorners[1][1], 0, (transformered_height + transformedCorners[1][1]), c_height, current_person_bp[1]))
+                interpolation(transformedCorners[1][1], 0, (transformered_height + transformedCorners[1][1]), c_height, current_person_bp[1])]
+
+            for k in range(2):
+                if people_detected[i].coordinates[k] < 0:
+                   people_detected[i].coordinates[k] = 0
+                elif people_detected[i].coordinates[k] > 499:
+                    people_detected[i].coordinates[k] = 499
 
             for j in range(i+1, size_people_detected):
 
@@ -151,6 +162,11 @@ def people_tracker(args):
 
             cv2.rectangle(frame, (bb_x, bb_y), (bb_x + person.width, bb_y + person.height), color, 2)
 
+            for infected_with_idx in person.infected_with:
+                if euclidian_distance(person.centroid[0], person.centroid[1], people_detected[infected_with_idx].centroid[0], people_detected[infected_with_idx].centroid[1]) < 200:
+                    cv2.line(frame, person.centroid, people_detected[infected_with_idx].centroid, (0, 0, 255), 2) 
+
+
             color = "green" if person.safe else "red"
             canvas.create_oval(
                 (person.coordinates[0] - 5),
@@ -158,6 +174,22 @@ def people_tracker(args):
                 (person.coordinates[0] + 5),
                 (person.coordinates[1] + 5),
                 fill=color)
+
+        people_not_safe = 0
+        coordinates = []
+        for person in people_detected:
+            if not person.safe:
+                people_not_safe += 1
+            coordinates.append(person.coordinates)
+
+        risk_evaluator.update(people_not_safe, size_people_detected, size_people_detected)
+        risk = risk_evaluator.compute_risk()
+        environmental_risk = risk_evaluator.compute_environmental_risk()
+        geographical_risk = risk_evaluator.compute_geo_risk()
+        #update database:
+        database.update_information(size_people_detected/10, people_not_safe, environmental_risk, geographical_risk, risk, coordinates)
+
+        database.update = True
 
         print("PEOPLE IN IMAGE: {}".format(len(people_detected)),
                 "PEOPLE PER SQ METER: {}".format(len(people_detected)/area if len(people_detected) > 0 else 0))
@@ -202,9 +234,13 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--skip_frames", type=int, default=3,help="# of skip frames between detections")
     parser.add_argument("-l", "--labels", type=str, help="path to the classes file")
     parser.add_argument("-t", "--threshold", type=float, default=0.2, help="threshold when applying non-maxima suppression")
-    parser.add_argument("-a", "--alpha", type=float, default=1.5, help="alpha parameter for for input frame contrast enhancement (0 - 3")
+    parser.add_argument("-a", "--alpha", type=float, default=1.0, help="alpha parameter for for input frame contrast enhancement (0 - 3")
     parser.add_argument("-b", "--beta", type=float, default= 0, help="beta parameter for input frame brightness enhancement (0 - 100)")
     args = vars(parser.parse_args())
 
     definitions.setup(args)
-    people_tracker(args)
+    database = DataBase()
+    t = threading.Thread(target=database.update_database)
+    t.start()
+   
+    people_tracker(args, database)
